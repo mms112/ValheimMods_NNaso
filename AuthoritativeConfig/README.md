@@ -21,7 +21,7 @@ public new AuthoritativeConfig.Config Config
 }
 ```
 
-Then in your mod's Awake method call ```Config.init(ModClass, bool defaultBindsToServerAuthoritative)```
+Then in your mod's Awake method call ```Config.init(BaseUnityPlugin instance, bool defaultBindsToServerAuthoritative)```
 
 Done. Binds have a new bool argument for setting server Authoritative. If not entered they will fall back to the default set in Config.Init().
 
