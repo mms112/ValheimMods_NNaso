@@ -1,0 +1,64 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>net4.7.2</TargetFramework>
+    <TargetFrameworkVersion>v4.7.2</TargetFrameworkVersion>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <Compile Include="..\AuthoritativeConfig\**\*.cs">
+      <Link>.\Resources</Link>
+    </Compile>
+
+    <Reference Include="0Harmony.dll">
+      <HintPath>Libs/0Harmony.dll</HintPath>
+      <SpecificVersion>False</SpecificVersion> 
+      <!-- You may set it to true if your dll has a specific version -->
+    </Reference>
+    <Reference Include="BepInEx.dll">
+      <HintPath>Libs/BepInEx.dll</HintPath>
+      <SpecificVersion>False</SpecificVersion> 
+      <!-- You may set it to true if your dll has a specific version -->
+    </Reference>
+    <Reference Include="assembly_valheim.dll">
+      <HintPath>Libs/assembly_valheim.dll</HintPath>
+      <SpecificVersion>False</SpecificVersion> 
+      <!-- You may set it to true if your dll has a specific version -->
+    </Reference>
+    <Reference Include="assembly_utils.dll">
+      <HintPath>Libs/assembly_utils.dll</HintPath>
+      <SpecificVersion>False</SpecificVersion> 
+      <!-- You may set it to true if your dll has a specific version -->
+    </Reference>
+    <Reference Include="UnityEngine.dll">
+      <HintPath>Libs/UnityEngine.dll</HintPath>
+      <SpecificVersion>False</SpecificVersion> 
+      <!-- You may set it to true if your dll has a specific version -->
+    </Reference>
+    <Reference Include="UnityEngine.CoreModule.dll">
+      <HintPath>Libs/UnityEngine.CoreModule.dll</HintPath>
+      <SpecificVersion>False</SpecificVersion> 
+      <!-- You may set it to true if your dll has a specific version -->
+    </Reference>
+    <Reference Include="UnityEngine.PhysicsModule.dll">
+      <HintPath>Libs/UnityEngine.PhysicsModule.dll</HintPath>
+      <SpecificVersion>False</SpecificVersion> 
+      <!-- You may set it to true if your dll has a specific version -->
+    </Reference>
+    <Reference Include="UnityEngine.UI.dll">
+      <HintPath>Libs/UnityEngine.UI.dll</HintPath>
+      <SpecificVersion>False</SpecificVersion> 
+      <!-- You may set it to true if your dll has a specific version -->
+    </Reference>
+    <Reference Include="UnityEngine.AnimationModule.dll">
+      <HintPath>Libs/UnityEngine.AnimationModule.dll</HintPath>
+      <SpecificVersion>False</SpecificVersion> 
+      <!-- You may set it to true if your dll has a specific version -->
+    </Reference>
+    <Reference Include="UnityEngine.AssetBundleModule.dll, Version=0.0.0.0, Culture=neutral, processorArchitecture=MSIL">
+      <SpecificVersion>False</SpecificVersion>
+      <HintPath>Libs/UnityEngine.AssetBundleModule.dll</HintPath>
+    </Reference>
+  </ItemGroup>
+
+</Project>
