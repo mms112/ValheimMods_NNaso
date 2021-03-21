@@ -169,6 +169,12 @@ namespace AuthoritativeConfig
         public BepInEx.Configuration.ConfigEntryBase BaseEntry;
         public bool ServerAuthoritative;
 
+        internal ConfigBaseEntry( BepInEx.Configuration.ConfigEntryBase configEntry, bool serverAuthoritative ) 
+        {
+            BaseEntry = configEntry;
+            ServerAuthoritative = serverAuthoritative;
+        }
+
         public void SetSerializedValue(string value)
         {
             try
@@ -192,11 +198,9 @@ namespace AuthoritativeConfig
         public T ServerValue => (T)_serverValue;
         private BepInEx.Configuration.ConfigEntry<T> _configEntry;
 
-        internal ConfigEntry( BepInEx.Configuration.ConfigEntry<T> configEntry, bool serverAuthoritative )
+        internal ConfigEntry( BepInEx.Configuration.ConfigEntry<T> configEntry, bool serverAuthoritative ) : base( configEntry, serverAuthoritative )
         {
             _configEntry = configEntry;
-            BaseEntry = configEntry;
-            ServerAuthoritative = serverAuthoritative;
         }
 
         public T Value
