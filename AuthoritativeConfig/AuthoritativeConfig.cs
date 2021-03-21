@@ -168,6 +168,7 @@ namespace AuthoritativeConfig
         protected object _serverValue = null;
         public BepInEx.Configuration.ConfigEntryBase BaseEntry;
         public bool ServerAuthoritative;
+        protected bool _didError = false;
 
         internal ConfigBaseEntry( BepInEx.Configuration.ConfigEntryBase configEntry, bool serverAuthoritative ) 
         {
@@ -180,6 +181,7 @@ namespace AuthoritativeConfig
             try
             {
                 object tmp = (_serverValue = TomlTypeConverter.ConvertToValue(value, BaseEntry.SettingType));
+                _didError = false;
             }
             catch (Exception ex)
             {
@@ -190,6 +192,7 @@ namespace AuthoritativeConfig
         public void ClearServerValue()
         {
             _serverValue = null;
+            _didError = false;
         }
     }
 
@@ -216,7 +219,11 @@ namespace AuthoritativeConfig
                     }
                     else
                     {
-                        Config.Logger.LogError($"No Recieved value for Server Authoritative Config. {BaseEntry.Definition.ToString()}. Falling Back to Client Config.");
+                        if( !_didError )
+                        {
+                            Config.Logger.LogError($"No Recieved value for Server Authoritative Config. {BaseEntry.Definition.ToString()}. Falling Back to Client Config.");
+                            _didError = true;
+                        }
                         return _configEntry.Value;
                     }
                 }
