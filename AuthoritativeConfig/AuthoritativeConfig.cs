@@ -221,7 +221,7 @@ namespace AuthoritativeConfig
                     {
                         if( !_didError )
                         {
-                            Config.Logger.LogError($"No Recieved value for Server Authoritative Config. {BaseEntry.Definition.ToString()}. Falling Back to Client Config.");
+                            Config.Logger.LogWarning($"No Recieved value for Server Authoritative Config. {BaseEntry.Definition.ToString()}. Falling Back to Client Config.");
                             _didError = true;
                         }
                         return _configEntry.Value;
