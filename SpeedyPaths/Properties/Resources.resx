@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<root>
+  <data name="speedyassets" type="System.Resources.ResXFileRef, System.Windows.Forms">
+    <value>../nex.speedypaths;System.Byte[], mscorlib, Version=4.0.0.0, Culture=neutral</value>
+  </data>
+</root>
