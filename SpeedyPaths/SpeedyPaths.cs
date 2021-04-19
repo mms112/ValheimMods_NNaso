@@ -285,7 +285,7 @@ namespace SpeedyPaths
                 Heightmap hmap = lastGroundCollider.GetComponent<Heightmap>();
                 if (hmap != null)
                 {
-                    Texture2D clearedMask = Traverse.Create(hmap).Field("m_clearedMask").GetValue() as Texture2D;
+                    Texture2D paintMask = Traverse.Create(hmap).Field("m_paintMask").GetValue() as Texture2D;
                     _worldToVertexArgs[0] = Traverse.Create(player).Field("m_lastGroundPoint").GetValue() as Vector3?;
                     AccessTools.Method(typeof(Heightmap), "WorldToVertex").Invoke(hmap, _worldToVertexArgs);
                     //Sample a 3x3 range of pixels at last groundpoint
@@ -298,9 +298,9 @@ namespace SpeedyPaths
                         {
                             int x_scan = (int)_worldToVertexArgs[1] + x;
                             int y_scan = (int)_worldToVertexArgs[2] + y;
-                            if( x_scan >= 0 && x_scan < clearedMask.width && y_scan >= 0 && y_scan < clearedMask.height )
+                            if( x_scan >= 0 && x_scan < paintMask.width && y_scan >= 0 && y_scan < paintMask.height )
                             {
-                                hmcl_pixel += clearedMask.GetPixel( x_scan, y_scan );
+                                hmcl_pixel += paintMask.GetPixel( x_scan, y_scan );
                                 samples++;
                             }
                         }
@@ -311,7 +311,7 @@ namespace SpeedyPaths
                     hmcl_pixel.a /= (float)samples;
                     //Logger.LogInfo($"Avg ground pixel {hmcl_pixel.ToString()} from {samples.ToString()} Samples");
                     //Single Pixel
-                    //Color hmcl_pixel = clearedMask.GetPixel( (int)_worldToVertexArgs[1], (int)_worldToVertexArgs[2] );
+                    //Color hmcl_pixel = paintMask.GetPixel( (int)_worldToVertexArgs[1], (int)_worldToVertexArgs[2] );
                     if( hmcl_pixel.b > 0.4f )
                     {
                         return GroundType.PathStone;
