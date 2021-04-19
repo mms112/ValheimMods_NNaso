@@ -352,6 +352,9 @@ https://valheim.thunderstore.io/package/Nextek/SpeedyPaths/
 https://github.com/NNaso/ValheimMods/tree/main/SpeedyPaths
 
 ## Changelog
+**Version 1.0.5**  
+- Support for Game Update 0.150.3
+
 **Version 1.0.4**  
 - Speedy Paths Server Config Sync. Client will Sync to server config if server is running Speedy Paths.
 - Smoother road detection sampling an average. This should make patchy roads more uniform (preferring stone)

@@ -9,7 +9,7 @@ using System;
 
 namespace SpeedyPaths
 {
-    [BepInPlugin("nex.SpeedyPaths", "Speedy Paths Mod", "1.0.4")]
+    [BepInPlugin("nex.SpeedyPaths", "Speedy Paths Mod", "1.0.5")]
     public class SpeedyPathsClientMod : BaseUnityPlugin { 
         public enum GroundType
         {
