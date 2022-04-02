@@ -9,7 +9,7 @@ using System;
 
 namespace SpeedyPaths
 {
-    [BepInPlugin("nex.SpeedyPaths", "Speedy Paths Mod", "1.0.5")]
+    [BepInPlugin("nex.SpeedyPaths", "Speedy Paths Mod", "1.0.6")]
     public class SpeedyPathsClientMod : BaseUnityPlugin { 
         public enum GroundType
         {
@@ -32,6 +32,8 @@ namespace SpeedyPaths
         private static ConfigEntry<bool> _hudShowEffectPercent;
         private static List<ConfigEntry<float>> _hudPosIconThresholds = new List<ConfigEntry<float>>();
         private static List<ConfigEntry<float>> _hudNegIconThresholds = new List<ConfigEntry<float>>();
+        private static ConfigEntry<float> _groundSensorUpdateInterval;
+        private static ConfigEntry<int> _groundSensorRadius;
 
         //Display Strings
         private static Dictionary<GroundType, ConfigEntry<string>> _groundTypeStrings = new Dictionary<GroundType, ConfigEntry<string>>();
@@ -41,6 +43,9 @@ namespace SpeedyPaths
         private static object[] _worldToVertexArgs = new object[]{ Vector3.zero, null, null };
         private static List<Sprite> _speedSprites = new List<Sprite>();
         AssetBundle _speedyassets;
+
+        private static float m_sensorTime;
+        private static GroundType m_cachedGroundType;
 
         public new static BepInEx.Logging.ManualLogSource Logger;
 
@@ -53,14 +58,11 @@ namespace SpeedyPaths
         void Awake() {
             Logger = base.Logger;
 
-            if (Application.platform == RuntimePlatform.WindowsPlayer)
+            _speedyassets = AssetBundle.LoadFromMemory(Properties.Resources.speedyassets);
+            if (!_speedyassets)
             {
-                _speedyassets = AssetBundle.LoadFromMemory(Properties.Resources.speedyassets);
-                if (!_speedyassets)
-                {
-                    Logger.LogError($"Failed to read AssetBundle stream");
-                    return;
-                }
+                Logger.LogError($"Failed to read AssetBundle stream");
+                return;
             }
 
             Config.init( this, true );
@@ -73,6 +75,9 @@ namespace SpeedyPaths
             _hudPosIconThresholds.Add( Config.Bind("Hud", "BuffIcon +2", 1.39f, "Speed buff threshold to show lvl 2 buff icon") );
             _hudNegIconThresholds.Add( Config.Bind("Hud", "DebuffIcon -1", 1.0f, "Speed buff threshold to show lvl 1 debuff icon") );
             _hudNegIconThresholds.Add( Config.Bind("Hud", "DebuffIcon -2", 0.79f, "Speed buff threshold to show lvl 2 debuff icon") );
+
+            _groundSensorUpdateInterval = Config.Bind("Performance", "Ground Sensor Interval", 1.0f, "Interval between in seconds between ground type checks. Lower number, more accute ground detection.", true);
+            _groundSensorRadius = Config.Bind("Performance", "Ground Sensor Radius", 1, "Radius of ground pixels to sample when checking under the player", true);
 
             _speedModifiers[GroundType.PathDirt] = Config.Bind("SpeedModifiers", "DirtPathSpeed", 1.15f, "Modifier for speed while on dirt paths");
             _speedModifiers[GroundType.PathStone] = Config.Bind("SpeedModifiers", "StonePathSpeed", 1.4f, "Modifier for speed while on stone paths");
@@ -120,6 +125,9 @@ namespace SpeedyPaths
             _speedSprites.Add( _speedyassets.LoadAsset<Sprite>("assets/nex.speedypaths/speedypaths_n1.png") );
             _speedSprites.Add( _speedyassets.LoadAsset<Sprite>("assets/nex.speedypaths/speedypaths_n2.png") );
 
+            m_sensorTime = 0f;
+            m_cachedGroundType = GroundType.Untamed;
+
             Harmony.CreateAndPatchAll(typeof(SpeedyPathsClientMod));
         }
 
@@ -133,8 +141,10 @@ namespace SpeedyPaths
         [HarmonyPrefix]
         static void UpdateModifiers( Player __instance )
         {
+            m_sensorTime -= Time.fixedDeltaTime;
             if( Player.m_localPlayer == __instance && !__instance.IsDead() )
             {
+                UpdateGroundTypeCache( __instance );
                 _activeSpeedModifier = GetSpeedyPathModifier( __instance );
                 _activeStaminaModifier = GetSpeedyPathStaminaModifier(__instance);
 
@@ -231,11 +241,10 @@ namespace SpeedyPaths
         {
             if( !player.IsSwiming() && !player.InInterior() )
             {
-                GroundType groundtype = GetGroundType(player);
-                if( _speedModifiers.ContainsKey(groundtype) )
+                if( _speedModifiers.ContainsKey(m_cachedGroundType) )
                 {
-                    _activeStatusText = _groundTypeStrings[groundtype].Value;
-                    return _speedModifiers[groundtype].Value;
+                    _activeStatusText = _groundTypeStrings[m_cachedGroundType].Value;
+                    return _speedModifiers[m_cachedGroundType].Value;
                 }
                 //fallback to biome speed
                 Heightmap.Biome playerBiome = player.GetCurrentBiome();
@@ -259,10 +268,9 @@ namespace SpeedyPaths
         {
             if( !player.IsSwiming() && !player.InInterior() )
             {
-                GroundType groundtype = GetGroundType(player);
-                if( _staminaModifiers.ContainsKey(groundtype) )
+                if( _staminaModifiers.ContainsKey(m_cachedGroundType) )
                 {
-                    return _staminaModifiers[groundtype].Value;
+                    return _staminaModifiers[m_cachedGroundType].Value;
                 }
                 //fallback to biome stamina
                 Heightmap.Biome playerBiome = player.GetCurrentBiome();
@@ -277,57 +285,19 @@ namespace SpeedyPaths
             return 1.0f;
         }
 
-        static GroundType GetGroundType( Player player )
+        static void UpdateGroundTypeCache( Player player )
         {
+            if(m_sensorTime > 0)
+            {
+                return;
+            }
+            m_sensorTime = _groundSensorUpdateInterval.Value;
             Collider lastGroundCollider = player.GetLastGroundCollider();
             if ((bool)lastGroundCollider)
             {
-                Heightmap hmap = lastGroundCollider.GetComponent<Heightmap>();
-                if (hmap != null)
-                {
-                    Texture2D paintMask = Traverse.Create(hmap).Field("m_paintMask").GetValue() as Texture2D;
-                    _worldToVertexArgs[0] = Traverse.Create(player).Field("m_lastGroundPoint").GetValue() as Vector3?;
-                    AccessTools.Method(typeof(Heightmap), "WorldToVertex").Invoke(hmap, _worldToVertexArgs);
-                    //Sample a 3x3 range of pixels at last groundpoint
-                    int sample_radius = 1;
-                    Color hmcl_pixel = new Color();
-                    int samples = 0;
-                    for( int x = -sample_radius; x <= sample_radius; ++x )
-                    {
-                        for( int y = -sample_radius; y <= sample_radius; ++y )
-                        {
-                            int x_scan = (int)_worldToVertexArgs[1] + x;
-                            int y_scan = (int)_worldToVertexArgs[2] + y;
-                            if( x_scan >= 0 && x_scan < paintMask.width && y_scan >= 0 && y_scan < paintMask.height )
-                            {
-                                hmcl_pixel += paintMask.GetPixel( x_scan, y_scan );
-                                samples++;
-                            }
-                        }
-                    }
-                    hmcl_pixel.r /= (float)samples;
-                    hmcl_pixel.g /= (float)samples;
-                    hmcl_pixel.b /= (float)samples;
-                    hmcl_pixel.a /= (float)samples;
-                    //Logger.LogInfo($"Avg ground pixel {hmcl_pixel.ToString()} from {samples.ToString()} Samples");
-                    //Single Pixel
-                    //Color hmcl_pixel = paintMask.GetPixel( (int)_worldToVertexArgs[1], (int)_worldToVertexArgs[2] );
-                    if( hmcl_pixel.b > 0.4f )
-                    {
-                        return GroundType.PathStone;
-                    }
-                    else if( hmcl_pixel.r > 0.4f )
-                    {
-                        return GroundType.PathDirt;
-                    }
-                    else if( hmcl_pixel.g > 0.4f )
-                    {
-                        return GroundType.Cultivated;
-                    }
-
-                }
                 //this is extremely generous, a kiln road will work...
                 //todo: piece whitelist / blacklist?
+                //Do this check first, so we can potentially break out from expensive terrain check
                 if (lastGroundCollider.gameObject.layer == m_pieceLayer)
                 {
                     WearNTear componentInParent = lastGroundCollider.GetComponentInParent<WearNTear>();
@@ -336,18 +306,78 @@ namespace SpeedyPaths
                         switch (componentInParent.m_materialType)
                         {
                         case WearNTear.MaterialType.Wood:
-                            return GroundType.StructureWood;
+                            m_cachedGroundType = GroundType.StructureWood;
+                            return;
                         case WearNTear.MaterialType.Stone:
-                            return GroundType.StructureStone;
+                            m_cachedGroundType = GroundType.StructureStone;
+                            return;
                         case WearNTear.MaterialType.HardWood:
-                            return GroundType.StructureHardWood;
+                            m_cachedGroundType = GroundType.StructureHardWood;
+                            return;
                         case WearNTear.MaterialType.Iron:
-                            return GroundType.StructureIron;
+                            m_cachedGroundType = GroundType.StructureIron;
+                            return;
                         }
                     }
                 }
+
+                Heightmap hmap = lastGroundCollider.GetComponent<Heightmap>();
+                if (hmap != null)
+                {
+                    Texture2D paintMask = Traverse.Create(hmap).Field("m_paintMask").GetValue() as Texture2D;
+                    _worldToVertexArgs[0] = Traverse.Create(player).Field("m_lastGroundPoint").GetValue() as Vector3?;
+                    AccessTools.Method(typeof(Heightmap), "WorldToVertex").Invoke(hmap, _worldToVertexArgs);
+                    int sample_radius = _groundSensorRadius.Value;
+                    Color hmcl_pixel = new Color();
+
+                    //optimize ground sampling into a single call to getPixels
+                    //These are stitched together, we only check the Heightmap the player is currently on. So we need to be mindful of the edges.
+                    int x_range_min = Math.Max((int)_worldToVertexArgs[1] - sample_radius, 0);
+                    int x_range_max = sample_radius * 2;
+                    if(x_range_max + (int)_worldToVertexArgs[1] >= paintMask.width)
+                    {
+                        x_range_max = paintMask.width - x_range_min - 1;
+                    }
+                    int y_range_min = Math.Max((int)_worldToVertexArgs[2] - sample_radius, 0);
+                    int y_range_max = sample_radius * 2;
+                    if(y_range_max + (int)_worldToVertexArgs[2] >= paintMask.height)
+                    {
+                        y_range_max = paintMask.height - y_range_min - 1;
+                    }
+
+                    //Logger.LogInfo($"Fetching Pixel range x: {x_range_min.ToString()} + {x_range_max.ToString()}  y: {y_range_min.ToString()} + {y_range_max.ToString()}");
+                    var samples = paintMask.GetPixels(x_range_min, y_range_min, x_range_max, y_range_max, 0);
+                    //Logger.LogInfo($"Got Samples: {samples.Length.ToString()}");
+
+                    foreach(var pixel in samples)
+                    {
+                        hmcl_pixel += pixel;
+                        //Logger.LogInfo($"Sample: {pixel.ToString()}");
+                    }
+
+                    hmcl_pixel = new Color(hmcl_pixel.r / samples.Length, hmcl_pixel.g / samples.Length, hmcl_pixel.b / samples.Length);
+                    //Logger.LogInfo($"Avg ground pixel {hmcl_pixel.ToString()} from {samples.ToString()} Samples");
+
+                    //Single Pixel
+                    //Color hmcl_pixel = paintMask.GetPixel( (int)_worldToVertexArgs[1], (int)_worldToVertexArgs[2] );
+                    if( hmcl_pixel.b > 0.4f )
+                    {
+                        m_cachedGroundType = GroundType.PathStone;
+                        return;
+                    }
+                    else if( hmcl_pixel.r > 0.4f )
+                    {
+                        m_cachedGroundType = GroundType.PathDirt;
+                        return;
+                    }
+                    else if( hmcl_pixel.g > 0.4f )
+                    {
+                        m_cachedGroundType = GroundType.Cultivated;
+                        return;
+                    }
+                }
             }
-            return GroundType.Untamed;
+            m_cachedGroundType = GroundType.Untamed;
         }
     }
 }
