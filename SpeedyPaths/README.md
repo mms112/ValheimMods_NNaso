@@ -352,6 +352,10 @@ https://valheim.thunderstore.io/package/Nextek/SpeedyPaths/
 https://github.com/NNaso/ValheimMods/tree/main/SpeedyPaths
 
 ## Changelog
+**Version 1.0.6**  
+- Fix for SpeedyPaths not working on linux clients.
+- Performance fixes and 2 new configs for performance.
+
 **Version 1.0.5**  
 - Support for Game Update 0.150.3
 
