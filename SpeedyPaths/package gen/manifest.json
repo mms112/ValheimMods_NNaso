@@ -1,0 +1,11 @@
+{
+    "name": "SpeedyPaths",
+    "version_number": "$$version$$",
+    "website_url": "https://github.com/NNaso/ValheimMods/tree/main/SpeedyPaths",
+    "description": "Gives more purpose to paths. Increases player speed on paths and constructions. Reduces stamina consumed while sprinting on paths. Exposes optional modifiers for regular terrain in each biome. All values are tuneable.",
+    "dependencies": [
+        "denikson-BepInExPack_Valheim-5.4.900"
+    ],
+    "AuthorName": "Nextek",
+    "DisplayName": "Speedy Paths"
+}

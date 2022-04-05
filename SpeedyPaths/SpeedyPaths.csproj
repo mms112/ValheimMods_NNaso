@@ -5,10 +5,16 @@
     <TargetFrameworkVersion>v4.7.2</TargetFrameworkVersion>
   </PropertyGroup>
 
+
   <ItemGroup>
     <Compile Include="..\AuthoritativeConfig\**\*.cs">
       <Link>.\Resources</Link>
     </Compile>
+
+    <Content Remove="UnityAssets\**" />
+    <Compile Remove="UnityAssets\**" />
+    <EmbeddedResource Remove="UnityAssets\**" />
+    <None Remove="UnityAssets\**" />
 
     <Reference Include="0Harmony.dll">
       <HintPath>Libs/0Harmony.dll</HintPath>
@@ -42,16 +48,6 @@
     </Reference>
     <Reference Include="UnityEngine.PhysicsModule.dll">
       <HintPath>Libs/UnityEngine.PhysicsModule.dll</HintPath>
-      <SpecificVersion>False</SpecificVersion> 
-      <!-- You may set it to true if your dll has a specific version -->
-    </Reference>
-    <Reference Include="UnityEngine.UI.dll">
-      <HintPath>Libs/UnityEngine.UI.dll</HintPath>
-      <SpecificVersion>False</SpecificVersion> 
-      <!-- You may set it to true if your dll has a specific version -->
-    </Reference>
-    <Reference Include="UnityEngine.AnimationModule.dll">
-      <HintPath>Libs/UnityEngine.AnimationModule.dll</HintPath>
       <SpecificVersion>False</SpecificVersion> 
       <!-- You may set it to true if your dll has a specific version -->
     </Reference>

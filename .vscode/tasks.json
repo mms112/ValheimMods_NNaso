@@ -1,0 +1,80 @@
+{
+    // See https://go.microsoft.com/fwlink/?LinkId=733558
+    // for the documentation about the tasks.json format
+    "version": "2.0.0",
+    "tasks": [
+        {
+            "label": "build_dummy",
+            "command": "dotnet",
+            "type": "shell",
+            "args": [
+                "build",
+                "${workspaceFolder}/dummy_test/dummy_test.csproj",
+                "-c",
+                "Release"
+            ],
+            "group": "build",
+            "presentation": {
+                "reveal": "silent"
+            },
+            "problemMatcher": "$msCompile"
+        },
+        {
+            "label": "build_release",
+            "command": "dotnet",
+            "type": "shell",
+            "args": [
+                "build",
+                "${workspaceFolder}/SpeedyPaths/SpeedyPaths.csproj",
+                "-c",
+                "Release"
+            ],
+            "group": "build",
+            "presentation": {
+                "reveal": "silent"
+            },
+            "problemMatcher": "$msCompile"
+        },
+        {
+            "label": "copy_dll_game",
+            "command": "xcopy",
+            "type": "shell",
+            "args": [
+                "${workspaceFolder}\\SpeedyPaths\\bin\\Release\\net4.7.2\\SpeedyPaths.dll",
+                "D:\\SteamLibrary\\steamapps\\common\\Valheim\\BepInEx\\plugins",
+                "/Y"
+            ],
+            "problemMatcher": []
+        },
+        {
+            "label": "copy_dll_server",
+            "command": "xcopy",
+            "type": "shell",
+            "args": [
+                "${workspaceFolder}\\SpeedyPaths\\bin\\Release\\net4.7.2\\SpeedyPaths.dll",
+                "D:\\SteamLibrary\\steamapps\\common\\Valheim dedicated server\\BepInEx\\plugins",
+                "/Y"
+            ],
+            "problemMatcher": []
+        },
+        {
+            "label": "Build",
+            "dependsOrder": "sequence",
+            "dependsOn": [
+                "build_release",
+                "copy_dll_game",
+                "copy_dll_server"
+            ],
+            "group": "build",
+            "problemMatcher": [
+                "$msCompile"
+            ]
+        },
+        {
+            "label": "Package Mod",
+            "type": "shell",
+            "command": "'${workspaceFolder}\\SpeedyPaths\\package gen\\generate package.ps1'",
+            "problemMatcher": []
+        }
+    ]
+}

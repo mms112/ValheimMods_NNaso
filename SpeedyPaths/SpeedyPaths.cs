@@ -3,8 +3,6 @@ using BepInEx;
 using AuthoritativeConfig;
 using HarmonyLib;
 using UnityEngine;
-using UnityEngine.UI;
-using System.Reflection;
 using System;
 
 namespace SpeedyPaths
