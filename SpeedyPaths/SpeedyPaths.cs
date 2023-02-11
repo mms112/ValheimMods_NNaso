@@ -7,7 +7,7 @@ using System;
 
 namespace SpeedyPaths
 {
-    [BepInPlugin("nex.SpeedyPaths", "Speedy Paths Mod", "1.0.6")]
+    [BepInPlugin("nex.SpeedyPaths", "Speedy Paths Mod", "1.0.7")]
     public class SpeedyPathsClientMod : BaseUnityPlugin { 
         public enum GroundType
         {
@@ -18,7 +18,8 @@ namespace SpeedyPaths
             StructureWood,
             StructureHardWood,
             StructureStone,
-            StructureIron
+            StructureIron,
+            StructureMarble
         }
         private static Dictionary<GroundType, ConfigEntry<float>> _speedModifiers = new Dictionary<GroundType, ConfigEntry<float>>();
         private static Dictionary<GroundType, ConfigEntry<float>> _staminaModifiers = new Dictionary<GroundType, ConfigEntry<float>>();
@@ -84,6 +85,7 @@ namespace SpeedyPaths
             _speedModifiers[GroundType.StructureHardWood] = Config.Bind("SpeedModifiers", "StructureHardWoodSpeed", 1.15f, "Modifier for speed while on core wood structures");
             _speedModifiers[GroundType.StructureStone] = Config.Bind("SpeedModifiers", "StructureStoneSpeed", 1.4f, "Modifier for speed while on stone structures");
             _speedModifiers[GroundType.StructureIron] = Config.Bind("SpeedModifiers", "StructureIronSpeed", 1.4f, "Modifier for speed while on ironwood structures");
+            _speedModifiers[GroundType.StructureMarble] = Config.Bind("SpeedModifiers", "StructureMarbleSpeed", 1.4f, "Modifier for speed while on black marble structures");
 
             _staminaModifiers[GroundType.PathDirt] = Config.Bind("StaminaModifiers", "DirtPathStamina", 0.8f, "Modifier for stamina while on dirt paths");
             _staminaModifiers[GroundType.PathStone] = Config.Bind("StaminaModifiers", "StonePathStamina", 0.7f, "Modifier for stamina while on stone paths");
@@ -92,6 +94,7 @@ namespace SpeedyPaths
             _staminaModifiers[GroundType.StructureHardWood] = Config.Bind("StaminaModifiers", "StructureHardWoodStamina", 0.8f, "Modifier for stamina while on core wood structures");
             _staminaModifiers[GroundType.StructureStone] = Config.Bind("StaminaModifiers", "StructureStoneStamina", 0.7f, "Modifier for stamina while on stone structures");
             _staminaModifiers[GroundType.StructureIron] = Config.Bind("StaminaModifiers", "StructureIronStamina", 0.7f, "Modifier for stamina while on ironwood structures");
+            _staminaModifiers[GroundType.StructureMarble] = Config.Bind("StaminaModifiers", "StructureMarbleStamina", 0.7f, "Modifier for stamina while on black marble  structures");
             
             //Should handle new biomes automagically
             foreach(Heightmap.Biome biome in Enum.GetValues(typeof(Heightmap.Biome)))
@@ -112,6 +115,7 @@ namespace SpeedyPaths
             _groundTypeStrings[GroundType.StructureHardWood] = Config.Bind("Strings", "StructureHardWood", "Hardwood", "Dynamic status mapping for core wood structures");
             _groundTypeStrings[GroundType.StructureStone] = Config.Bind("Strings", "StructureStone", "Stone", "MDynamic status mapping for stone structures");
             _groundTypeStrings[GroundType.StructureIron] = Config.Bind("Strings", "StructureIron", "Iron", "Dynamic status mapping for ironwood structures");
+            _groundTypeStrings[GroundType.StructureMarble] = Config.Bind("Strings", "StructureMarble", "Marble", "Dynamic status mapping for black marble structures");
 
             if (m_pieceLayer == 0)
             {
@@ -314,6 +318,9 @@ namespace SpeedyPaths
                             return;
                         case WearNTear.MaterialType.Iron:
                             m_cachedGroundType = GroundType.StructureIron;
+                            return;
+                        case WearNTear.MaterialType.Marble:
+                            m_cachedGroundType = GroundType.StructureMarble;
                             return;
                         }
                     }
