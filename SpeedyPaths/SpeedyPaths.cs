@@ -7,7 +7,7 @@ using System;
 
 namespace SpeedyPaths
 {
-    [BepInPlugin("nex.SpeedyPaths", "Speedy Paths Mod", "1.0.7")]
+    [BepInPlugin("nex.SpeedyPaths", "Speedy Paths Mod", "1.0.8")]
     public class SpeedyPathsClientMod : BaseUnityPlugin { 
         public enum GroundType
         {
@@ -99,10 +99,6 @@ namespace SpeedyPaths
             //Should handle new biomes automagically
             foreach(Heightmap.Biome biome in Enum.GetValues(typeof(Heightmap.Biome)))
             {
-                if(biome == Heightmap.Biome.BiomesMax)
-                {
-                    break;
-                }
                 _untamedSpeedModifiers[biome] = Config.Bind("SpeedModifiers_Biomes", "Untamed_" + biome.ToString() + "_Speed", 1.0f, "Speed modifier for uncleared ground in " + biome.ToString() + " Biomes");
                 _untamedStaminaModifiers[biome] = Config.Bind("StaminaModifiers_Biomes", "Untamed_" + biome.ToString()+ "_Stamina", 1.0f, "Stamina modifier for uncleared ground in " + biome.ToString() + " Biomes");
                 _biomeTypeStrings[biome] = Config.Bind("Strings", "Biome_"+biome.ToString(), "default", "Dynamic status mapping for "+ biome.ToString() +" groundcover. 'default' uses localized biome name.");
@@ -241,7 +237,7 @@ namespace SpeedyPaths
         //util funcs
         static float GetSpeedyPathModifier( Player player )
         {
-            if( !player.IsSwiming() && !player.InInterior() )
+            if( !player.IsSwimming() && !player.InInterior() )
             {
                 if( _speedModifiers.ContainsKey(m_cachedGroundType) )
                 {
@@ -268,7 +264,7 @@ namespace SpeedyPaths
 
         static float GetSpeedyPathStaminaModifier( Player player )
         {
-            if( !player.IsSwiming() && !player.InInterior() )
+            if( !player.IsSwimming() && !player.InInterior() )
             {
                 if( _staminaModifiers.ContainsKey(m_cachedGroundType) )
                 {
