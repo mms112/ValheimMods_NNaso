@@ -1,9 +1,11 @@
 ﻿using System.Collections.Generic;
 using BepInEx;
-using AuthoritativeConfig;
+using ServerSync;
 using HarmonyLib;
 using UnityEngine;
 using System;
+using BepInEx.Configuration;
+using System.Reflection;
 
 namespace SpeedyPaths
 {
@@ -21,6 +23,10 @@ namespace SpeedyPaths
             StructureIron,
             StructureMarble
         }
+
+        internal static readonly ConfigSync configSync = new ConfigSync("nex.SpeedyPaths") { DisplayName = "Speedy Paths Mod", CurrentVersion = "1.0.8", MinimumRequiredVersion = "1.0.8" };
+        private static ConfigEntry<bool> configLocked;
+
         private static Dictionary<GroundType, ConfigEntry<float>> _speedModifiers = new Dictionary<GroundType, ConfigEntry<float>>();
         private static Dictionary<GroundType, ConfigEntry<float>> _staminaModifiers = new Dictionary<GroundType, ConfigEntry<float>>();
         private static Dictionary<Heightmap.Biome, ConfigEntry<float>> _untamedSpeedModifiers = new Dictionary<Heightmap.Biome, ConfigEntry<float>>();
@@ -35,7 +41,7 @@ namespace SpeedyPaths
         private static ConfigEntry<int> _groundSensorRadius;
 
         //Display Strings
-        private static Dictionary<GroundType, ConfigEntry<string>> _groundTypeStrings = new Dictionary<GroundType, ConfigEntry<string>>();
+        private static Dictionary<GroundType, string> _groundTypeStrings = new Dictionary<GroundType, string>();
         private static Dictionary<Heightmap.Biome, ConfigEntry<string>> _biomeTypeStrings = new Dictionary<Heightmap.Biome, ConfigEntry<string>>();
 
         private static int m_pieceLayer;
@@ -47,71 +53,66 @@ namespace SpeedyPaths
         private static GroundType m_cachedGroundType;
 
         public new static BepInEx.Logging.ManualLogSource Logger;
-
-        public new AuthoritativeConfig.Config Config
-        {
-            get { return AuthoritativeConfig.Config.Instance; }
-            set {}
-        }
         
         void Awake() {
             Logger = base.Logger;
 
-            _speedyassets = AssetBundle.LoadFromMemory(Properties.Resources.speedyassets);
+            _speedyassets = AssetBundle.LoadFromStream(Assembly.GetExecutingAssembly().GetManifestResourceStream("nex.speedypaths"));
             if (!_speedyassets)
             {
                 Logger.LogError($"Failed to read AssetBundle stream");
                 return;
             }
 
-            Config.init( this, true );
+            configLocked = config("General", "LockConfiguration", true, "Configuration is locked and can be changed by server admins only.");
+            _hudDynamicStatusText = config("Hud", "EnableDynamicStatusText", true, "Show surface type text as status effect name", false);
+            _hudShowEffectPercent = config("Hud", "ShowStatusEffectPercent", true, "Show the status effect buff/debuff %", false);
+            _showHudStatus = config("Hud", "ShowStatusIcon", true, "Show the speedypaths status icon in the hud", false);
+            _hudStatusText = config("Hud", "StatusText", "Speedy Path", "Text shown above the status icon", false);
+            _hudPosIconThresholds.Add( config("Hud", "BuffIcon +1", 1.0f, "Speed buff threshold to show lvl 1 buff icon", false) );
+            _hudPosIconThresholds.Add( config("Hud", "BuffIcon +2", 1.39f, "Speed buff threshold to show lvl 2 buff icon", false) );
+            _hudNegIconThresholds.Add( config("Hud", "DebuffIcon -1", 1.0f, "Speed buff threshold to show lvl 1 debuff icon", false) );
+            _hudNegIconThresholds.Add( config("Hud", "DebuffIcon -2", 0.79f, "Speed buff threshold to show lvl 2 debuff icon", false) );
 
-            _hudDynamicStatusText = Config.Bind("Hud", "EnableDynamicStatusText", true, "Show surface type text as status effect name", false);
-            _hudShowEffectPercent = Config.Bind("Hud", "ShowStatusEffectPercent", true, "Show the status effect buff/debuff %", false);
-            _showHudStatus = Config.Bind("Hud", "ShowStatusIcon", true, "Show the speedypaths status icon in the hud", false);
-            _hudStatusText = Config.Bind("Hud", "StatusText", "Speedy Path", "Text shown above the status icon", false);
-            _hudPosIconThresholds.Add( Config.Bind("Hud", "BuffIcon +1", 1.0f, "Speed buff threshold to show lvl 1 buff icon") );
-            _hudPosIconThresholds.Add( Config.Bind("Hud", "BuffIcon +2", 1.39f, "Speed buff threshold to show lvl 2 buff icon") );
-            _hudNegIconThresholds.Add( Config.Bind("Hud", "DebuffIcon -1", 1.0f, "Speed buff threshold to show lvl 1 debuff icon") );
-            _hudNegIconThresholds.Add( Config.Bind("Hud", "DebuffIcon -2", 0.79f, "Speed buff threshold to show lvl 2 debuff icon") );
+            _groundSensorUpdateInterval = config("Performance", "Ground Sensor Interval", 1.0f, "Interval between in seconds between ground type checks. Lower number, more accute ground detection.", true);
+            _groundSensorRadius = config("Performance", "Ground Sensor Radius", 1, "Radius of ground pixels to sample when checking under the player", true);
 
-            _groundSensorUpdateInterval = Config.Bind("Performance", "Ground Sensor Interval", 1.0f, "Interval between in seconds between ground type checks. Lower number, more accute ground detection.", true);
-            _groundSensorRadius = Config.Bind("Performance", "Ground Sensor Radius", 1, "Radius of ground pixels to sample when checking under the player", true);
+            _speedModifiers[GroundType.PathDirt] = config("SpeedModifiers", "DirtPathSpeed", 1.15f, "Modifier for speed while on dirt paths");
+            _speedModifiers[GroundType.PathStone] = config("SpeedModifiers", "StonePathSpeed", 1.4f, "Modifier for speed while on stone paths");
+            _speedModifiers[GroundType.Cultivated] = config("SpeedModifiers", "CultivatedSpeed", 1.0f, "Modifier for speed while on Cultivated land");
+            _speedModifiers[GroundType.StructureWood] = config("SpeedModifiers", "StructureWoodSpeed", 1.15f, "Modifier for speed while on wood structures");
+            _speedModifiers[GroundType.StructureHardWood] = config("SpeedModifiers", "StructureHardWoodSpeed", 1.15f, "Modifier for speed while on core wood structures");
+            _speedModifiers[GroundType.StructureStone] = config("SpeedModifiers", "StructureStoneSpeed", 1.4f, "Modifier for speed while on stone structures");
+            _speedModifiers[GroundType.StructureIron] = config("SpeedModifiers", "StructureIronSpeed", 1.4f, "Modifier for speed while on ironwood structures");
+            _speedModifiers[GroundType.StructureMarble] = config("SpeedModifiers", "StructureMarbleSpeed", 1.4f, "Modifier for speed while on black marble structures");
 
-            _speedModifiers[GroundType.PathDirt] = Config.Bind("SpeedModifiers", "DirtPathSpeed", 1.15f, "Modifier for speed while on dirt paths");
-            _speedModifiers[GroundType.PathStone] = Config.Bind("SpeedModifiers", "StonePathSpeed", 1.4f, "Modifier for speed while on stone paths");
-            _speedModifiers[GroundType.Cultivated] = Config.Bind("SpeedModifiers", "CultivatedSpeed", 1.0f, "Modifier for speed while on Cultivated land");
-            _speedModifiers[GroundType.StructureWood] = Config.Bind("SpeedModifiers", "StructureWoodSpeed", 1.15f, "Modifier for speed while on wood structures");
-            _speedModifiers[GroundType.StructureHardWood] = Config.Bind("SpeedModifiers", "StructureHardWoodSpeed", 1.15f, "Modifier for speed while on core wood structures");
-            _speedModifiers[GroundType.StructureStone] = Config.Bind("SpeedModifiers", "StructureStoneSpeed", 1.4f, "Modifier for speed while on stone structures");
-            _speedModifiers[GroundType.StructureIron] = Config.Bind("SpeedModifiers", "StructureIronSpeed", 1.4f, "Modifier for speed while on ironwood structures");
-            _speedModifiers[GroundType.StructureMarble] = Config.Bind("SpeedModifiers", "StructureMarbleSpeed", 1.4f, "Modifier for speed while on black marble structures");
-
-            _staminaModifiers[GroundType.PathDirt] = Config.Bind("StaminaModifiers", "DirtPathStamina", 0.8f, "Modifier for stamina while on dirt paths");
-            _staminaModifiers[GroundType.PathStone] = Config.Bind("StaminaModifiers", "StonePathStamina", 0.7f, "Modifier for stamina while on stone paths");
-            _staminaModifiers[GroundType.Cultivated] = Config.Bind("StaminaModifiers", "CultivatedStamina", 1.0f, "Modifier for stamina while on Cultivated land");
-            _staminaModifiers[GroundType.StructureWood] = Config.Bind("StaminaModifiers", "StructureWoodStamina", 0.8f, "Modifier for stamina while on wood structures");
-            _staminaModifiers[GroundType.StructureHardWood] = Config.Bind("StaminaModifiers", "StructureHardWoodStamina", 0.8f, "Modifier for stamina while on core wood structures");
-            _staminaModifiers[GroundType.StructureStone] = Config.Bind("StaminaModifiers", "StructureStoneStamina", 0.7f, "Modifier for stamina while on stone structures");
-            _staminaModifiers[GroundType.StructureIron] = Config.Bind("StaminaModifiers", "StructureIronStamina", 0.7f, "Modifier for stamina while on ironwood structures");
-            _staminaModifiers[GroundType.StructureMarble] = Config.Bind("StaminaModifiers", "StructureMarbleStamina", 0.7f, "Modifier for stamina while on black marble  structures");
+            _staminaModifiers[GroundType.PathDirt] = config("StaminaModifiers", "DirtPathStamina", 0.8f, "Modifier for stamina while on dirt paths");
+            _staminaModifiers[GroundType.PathStone] = config("StaminaModifiers", "StonePathStamina", 0.7f, "Modifier for stamina while on stone paths");
+            _staminaModifiers[GroundType.Cultivated] = config("StaminaModifiers", "CultivatedStamina", 1.0f, "Modifier for stamina while on Cultivated land");
+            _staminaModifiers[GroundType.StructureWood] = config("StaminaModifiers", "StructureWoodStamina", 0.8f, "Modifier for stamina while on wood structures");
+            _staminaModifiers[GroundType.StructureHardWood] = config("StaminaModifiers", "StructureHardWoodStamina", 0.8f, "Modifier for stamina while on core wood structures");
+            _staminaModifiers[GroundType.StructureStone] = config("StaminaModifiers", "StructureStoneStamina", 0.7f, "Modifier for stamina while on stone structures");
+            _staminaModifiers[GroundType.StructureIron] = config("StaminaModifiers", "StructureIronStamina", 0.7f, "Modifier for stamina while on ironwood structures");
+            _staminaModifiers[GroundType.StructureMarble] = config("StaminaModifiers", "StructureMarbleStamina", 0.7f, "Modifier for stamina while on black marble  structures");
             
             //Should handle new biomes automagically
             foreach(Heightmap.Biome biome in Enum.GetValues(typeof(Heightmap.Biome)))
             {
-                _untamedSpeedModifiers[biome] = Config.Bind("SpeedModifiers_Biomes", "Untamed_" + biome.ToString() + "_Speed", 1.0f, "Speed modifier for uncleared ground in " + biome.ToString() + " Biomes");
-                _untamedStaminaModifiers[biome] = Config.Bind("StaminaModifiers_Biomes", "Untamed_" + biome.ToString()+ "_Stamina", 1.0f, "Stamina modifier for uncleared ground in " + biome.ToString() + " Biomes");
-                _biomeTypeStrings[biome] = Config.Bind("Strings", "Biome_"+biome.ToString(), "default", "Dynamic status mapping for "+ biome.ToString() +" groundcover. 'default' uses localized biome name.");
+                _untamedSpeedModifiers[biome] = config("SpeedModifiers_Biomes", "Untamed_" + biome.ToString() + "_Speed", 1.0f, "Speed modifier for uncleared ground in " + biome.ToString() + " Biomes");
+                _untamedStaminaModifiers[biome] = config("StaminaModifiers_Biomes", "Untamed_" + biome.ToString()+ "_Stamina", 1.0f, "Stamina modifier for uncleared ground in " + biome.ToString() + " Biomes");
+                _biomeTypeStrings[biome] = config("Strings", "Biome_"+biome.ToString(), "default", "Dynamic status mapping for "+ biome.ToString() +" groundcover. 'default' uses localized biome name.");
             }
 
-            _groundTypeStrings[GroundType.PathDirt] = Config.Bind("Strings", "PathDirt", "Dirt Path", "Dynamic status mapping for dirt paths");
-            _groundTypeStrings[GroundType.PathStone] = Config.Bind("Strings", "PathStone", "Stone Path", "Dynamic status mapping for  stone paths");
-            _groundTypeStrings[GroundType.Cultivated] = Config.Bind("Strings", "Cultivated", "Cultivated", "Dynamic status mapping for Cultivated land");
-            _groundTypeStrings[GroundType.StructureWood] = Config.Bind("Strings", "StructureWood", "Wood", "Dynamic status mapping for wood structures");
-            _groundTypeStrings[GroundType.StructureHardWood] = Config.Bind("Strings", "StructureHardWood", "Hardwood", "Dynamic status mapping for core wood structures");
-            _groundTypeStrings[GroundType.StructureStone] = Config.Bind("Strings", "StructureStone", "Stone", "MDynamic status mapping for stone structures");
-            _groundTypeStrings[GroundType.StructureIron] = Config.Bind("Strings", "StructureIron", "Iron", "Dynamic status mapping for ironwood structures");
-            _groundTypeStrings[GroundType.StructureMarble] = Config.Bind("Strings", "StructureMarble", "Marble", "Dynamic status mapping for black marble structures");
+            _groundTypeStrings[GroundType.PathDirt] = "$speedypath_dirtpath";
+            _groundTypeStrings[GroundType.PathStone] = "$piece_pavedroad";
+            _groundTypeStrings[GroundType.Cultivated] = "$speedypath_cultivated";
+            _groundTypeStrings[GroundType.StructureWood] = "$item_wood";
+            _groundTypeStrings[GroundType.StructureHardWood] = "$item_wood";
+            _groundTypeStrings[GroundType.StructureStone] = "$item_stone";
+            _groundTypeStrings[GroundType.StructureIron] = "$item_iron";
+            _groundTypeStrings[GroundType.StructureMarble] = "$item_blackmarble";
+
+            configSync.AddLockingConfigEntry(configLocked);
 
             if (m_pieceLayer == 0)
             {
@@ -128,6 +129,18 @@ namespace SpeedyPaths
 
             Harmony.CreateAndPatchAll(typeof(SpeedyPathsClientMod));
         }
+
+        ConfigEntry<T> config<T>(string group, string name, T defaultValue, ConfigDescription description, bool synchronizedSetting = true)
+        {
+            ConfigEntry<T> configEntry = Config.Bind(group, name, defaultValue, description);
+
+            SyncedConfigEntry<T> syncedConfigEntry = configSync.AddConfigEntry(configEntry);
+            syncedConfigEntry.SynchronizedConfig = synchronizedSetting;
+
+            return configEntry;
+        }
+
+        ConfigEntry<T> config<T>(string group, string name, T defaultValue, string description, bool synchronizedSetting = true) => config(group, name, defaultValue, new ConfigDescription(description), synchronizedSetting);
 
         private static float _activeSpeedModifier = 1.0f;
         private static float _activeStaminaModifier = 1.0f;
@@ -241,7 +254,7 @@ namespace SpeedyPaths
             {
                 if( _speedModifiers.ContainsKey(m_cachedGroundType) )
                 {
-                    _activeStatusText = _groundTypeStrings[m_cachedGroundType].Value;
+                    _activeStatusText = Localization.instance.Localize(_groundTypeStrings[m_cachedGroundType]);
                     return _speedModifiers[m_cachedGroundType].Value;
                 }
                 //fallback to biome speed

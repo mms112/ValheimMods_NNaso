@@ -1,60 +1,36 @@
-<Project Sdk="Microsoft.NET.Sdk">
-
+﻿<Project Sdk="Microsoft.NET.Sdk">
+  <Import Project="$(SolutionDir)\valheim.targets" />
   <PropertyGroup>
-    <TargetFramework>net4.7.2</TargetFramework>
-    <TargetFrameworkVersion>v4.7.2</TargetFrameworkVersion>
+    <Version>1.0.0</Version>
   </PropertyGroup>
 
+  <ItemGroup>
+    <PackageReference Include="ILRepack.Lib.MSBuild.Task">
+      <Version>2.0.18.2</Version>
+    </PackageReference>
+  </ItemGroup>
 
   <ItemGroup>
-    <Compile Include="..\AuthoritativeConfig\**\*.cs">
-      <Link>.\Resources</Link>
-    </Compile>
-
     <Content Remove="UnityAssets\**" />
     <Compile Remove="UnityAssets\**" />
     <EmbeddedResource Remove="UnityAssets\**" />
     <None Remove="UnityAssets\**" />
-
-    <Reference Include="0Harmony.dll">
-      <HintPath>Libs/0Harmony.dll</HintPath>
-      <SpecificVersion>False</SpecificVersion> 
-      <!-- You may set it to true if your dll has a specific version -->
-    </Reference>
-    <Reference Include="BepInEx.dll">
-      <HintPath>Libs/BepInEx.dll</HintPath>
-      <SpecificVersion>False</SpecificVersion> 
-      <!-- You may set it to true if your dll has a specific version -->
-    </Reference>
-    <Reference Include="assembly_valheim.dll">
-      <HintPath>Libs/assembly_valheim.dll</HintPath>
-      <SpecificVersion>False</SpecificVersion> 
-      <!-- You may set it to true if your dll has a specific version -->
-    </Reference>
-    <Reference Include="assembly_utils.dll">
-      <HintPath>Libs/assembly_utils.dll</HintPath>
-      <SpecificVersion>False</SpecificVersion> 
-      <!-- You may set it to true if your dll has a specific version -->
-    </Reference>
-    <Reference Include="UnityEngine.dll">
-      <HintPath>Libs/UnityEngine.dll</HintPath>
-      <SpecificVersion>False</SpecificVersion> 
-      <!-- You may set it to true if your dll has a specific version -->
-    </Reference>
-    <Reference Include="UnityEngine.CoreModule.dll">
-      <HintPath>Libs/UnityEngine.CoreModule.dll</HintPath>
-      <SpecificVersion>False</SpecificVersion> 
-      <!-- You may set it to true if your dll has a specific version -->
-    </Reference>
-    <Reference Include="UnityEngine.PhysicsModule.dll">
-      <HintPath>Libs/UnityEngine.PhysicsModule.dll</HintPath>
-      <SpecificVersion>False</SpecificVersion> 
-      <!-- You may set it to true if your dll has a specific version -->
-    </Reference>
-    <Reference Include="UnityEngine.AssetBundleModule.dll, Version=0.0.0.0, Culture=neutral, processorArchitecture=MSIL">
-      <SpecificVersion>False</SpecificVersion>
-      <HintPath>Libs/UnityEngine.AssetBundleModule.dll</HintPath>
-    </Reference>
   </ItemGroup>
 
+  <ItemGroup>
+    <Content Include="Translations\English\SpeedyPaths.json">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </Content>
+    <Content Include="Translations\German\SpeedyPaths.json">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </Content>
+  </ItemGroup>
+
+  <ItemGroup>
+    <EmbeddedResource Include="nex.speedypaths" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\..\ServerSync\ServerSync.csproj" />
+  </ItemGroup>
 </Project>
